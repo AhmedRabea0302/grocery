@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from "react";
 import List from "./List";
 import Alert from "./Alert";
-
+const getLocalStorage = () => {
+  let list = localStorage.getItem("list");
+  if (list) {
+    list = JSON.parse(localStorage.getItem("list"));
+  } else {
+    list = [];
+  }
+  return list;
+};
 function App() {
   const [name, setName] = useState("");
-  const [list, setList] = useState([]);
+  const [list, setList] = useState(getLocalStorage());
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [alert, setAlert] = useState({ show: false, msg: "", type: "" });
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name) {
-      // Display Alert
+      showAlert(true, "Please enter an item", "danger");
     } else if (name && isEditing) {
-      // Deal With Edit
+      setList(
+        list.map((item) => {
+          if (item.id === editId) {
+            return { ...item, title: name };
+          }
+        })
+      );
+      setIsEditing(false);
+      setName("");
+      setEditId(null);
+      showAlert(true, "You have Updated the item", "success");
     } else {
-      // Show alert
+      showAlert(true, "Item Added To Grocery!", "success");
       const newItem = { id: new Date().getTime().toString(), title: name };
       setList([...list, newItem]);
       setName("");
@@ -23,10 +41,33 @@ function App() {
 
     console.log("FFFFF");
   };
+
+  const showAlert = (show = false, msg = "", type = "") => {
+    setAlert({ show, msg, type });
+  };
+  const clearItems = () => {
+    showAlert(true, "You are have deleted all items", "danger");
+    setList([]);
+  };
+
+  const removeItem = (id) => {
+    showAlert(true, "You have deleted the item", "danger");
+    setList(list.filter((item) => item.id !== id));
+  };
+
+  const editItem = (id) => {
+    const item = list.find((item) => item.id === id);
+    setEditId(id);
+    setIsEditing(true);
+    setName(item.title);
+  };
+  useEffect(() => {
+    localStorage.setItem("list", JSON.stringify(list));
+  }, [list]);
   return (
     <section className="section-center">
       <form onSubmit={handleSubmit} className="grocery-form">
-        {alert.show && <Alert {...alert} />}
+        {alert.show && <Alert {...alert} removeAlert={showAlert} list={list} />}
         <h3>Grocery Bud</h3>
         <div className="form-control">
           <input
@@ -45,8 +86,10 @@ function App() {
       </form>
       {list.length > 0 && (
         <div className="grocery-container">
-          <List items={list} />
-          <button className="clear-btn">Clear Items</button>
+          <List items={list} removeItem={removeItem} editItem={editItem} />
+          <button className="clear-btn" onClick={clearItems}>
+            Clear Items
+          </button>
         </div>
       )}
     </section>
